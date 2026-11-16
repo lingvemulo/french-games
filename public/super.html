@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La super roue · Jeux de français</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎰</text></svg>">
+</head>
+<body class="theme-super">
+<header class="topbar">
+  <a class="back" href="./">← Tous les jeux</a>
+  <div class="toggles">
+    <button class="icon-btn" type="button" data-toggle="voice" title="Read the answer aloud in French"></button>
+    <button class="icon-btn" type="button" data-toggle="sound" title="Sound effects"></button>
+  </div>
+</header>
+<h1 class="page-title">La super roue</h1>
+<p class="page-sub">Spin all three, then conjugate!</p>
+
+<main class="multi">
+  <div class="multi-grid">
+    <section class="multi-col c-pronoun">
+      <div class="multi-label">1 · Pronom</div>
+      <div class="multi-wheel" id="w-pronoun"></div>
+      <div class="multi-pick" id="p-pronoun" lang="fr">?</div>
+    </section>
+    <section class="multi-col c-tense">
+      <div class="multi-label">2 · Temps</div>
+      <div class="multi-wheel" id="w-tense"></div>
+      <div class="multi-pick" id="p-tense" lang="fr">?</div>
+    </section>
+    <section class="multi-col c-verb">
+      <div class="multi-label">3 · Verbe</div>
+      <div class="multi-wheel" id="w-verb"></div>
+      <div class="multi-pick" id="p-verb" lang="fr">?</div>
+    </section>
+  </div>
+
+  <div class="multi-controls">
+    <button class="spin-btn" id="spinAll" type="button">Tourne ! 🎰</button>
+    <div class="kbd-hint">or press the space bar</div>
+
+    <div class="answer" id="answer" aria-live="polite">
+      <div class="result-hint">Spin the wheels, then say the answer out loud.</div>
+    </div>
+  </div>
+
+  <div class="multi-settings">
+    <div id="choose-pronoun"></div>
+    <div id="choose-tense"></div>
+  </div>
+</main>
+
+<script src="data.js"></script>
+<script src="conjugate.js"></script>
+<script src="spinner.js"></script>
+<script>
+  FG.wireToggles();
+
+  const D = FG_DATA;
+  const picks = {
+    pronoun: document.getElementById("p-pronoun"),
+    tense: document.getElementById("p-tense"),
+    verb: document.getElementById("p-verb")
+  };
+  const answerEl = document.getElementById("answer");
+  const spinBtn = document.getElementById("spinAll");
+
+  const wheels = {
+    pronoun: FG.createSpinner(document.getElementById("w-pronoun"), {
+      items: D.pronouns, storageKey: "super-pronouns", layout: "wheel-only",
+      chooserEl: document.getElementById("choose-pronoun"), chooserTitle: "Pronouns on the wheel",
+      tick: false, duration: 2600, onWheelClick: spinAll,
+      onResult: item => showPick("pronoun", item.fr)
+    }),
+    tense: FG.createSpinner(document.getElementById("w-tense"), {
+      items: D.tenses, storageKey: "super-tenses", layout: "wheel-only",
+      chooserEl: document.getElementById("choose-tense"), chooserTitle: "Tenses on the wheel",
+      tick: false, duration: 3500, onWheelClick: spinAll,
+      onResult: item => showPick("tense", item.fr)
+    }),
+    verb: FG.createSpinner(document.getElementById("w-verb"), {
+      items: D.verbs, storageKey: "super-verbs-all", layout: "wheel-only",
+      duration: 4600, onWheelClick: spinAll,
+      onResult: item => showPick("verb", item.fr)
+    })
+  };
+
+  function showPick(which, text) {
+    const el = picks[which];
+    el.textContent = text;
+    el.classList.remove("pop");
+    void el.offsetWidth;
+    el.classList.add("pop", "set");
+  }
+
+  const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  // Choose the three results first, so we never land on something that
+  // doesn't exist (e.g. "je" + impératif, or impératif of pouvoir).
+  function chooseTargets() {
+    const tenses = wheels.tense.active();
+    const pronouns = wheels.pronoun.active();
+    const verbs = wheels.verb.active();
+    const tense = rand(tenses);
+    const combos = [];
+    pronouns.forEach(p => verbs.forEach(v => {
+      if (FG_CONJ.exists(p.fr, tense.fr, v.fr)) combos.push([p, v]);
+    }));
+    const [pronoun, verb] = combos.length ? rand(combos) : [rand(pronouns), rand(verbs)];
+    return { pronoun, tense, verb };
+  }
+
+  let busy = false;
+  async function spinAll() {
+    if (busy) return;
+    busy = true;
+    spinBtn.disabled = true;
+    Object.values(picks).forEach(el => { el.textContent = "…"; el.classList.remove("set", "pop"); });
+    answerEl.className = "answer";
+    answerEl.innerHTML = '<div class="result-hint">…</div>';
+
+    const t = chooseTargets();
+    const [p, te, v] = await Promise.all([
+      wheels.pronoun.spin(t.pronoun.fr),
+      wheels.tense.spin(t.tense.fr),
+      wheels.verb.spin(t.verb.fr)
+    ]);
+    if (FG.prefs.sound) FG.sounds.ding();
+    busy = false;
+    spinBtn.disabled = false;
+    showQuestion(p, te, v);
+  }
+
+  function showQuestion(p, te, v) {
+    const res = FG_CONJ.conjugate(p.fr, te.fr, v.fr);
+    answerEl.className = "answer pop";
+    answerEl.innerHTML = `
+      <div class="q-line"><b lang="fr"></b> · <b lang="fr"></b> · <b lang="fr"></b></div>
+      <div class="q-help"></div>
+      <button class="reveal-btn" type="button">Show answer</button>`;
+    const bs = answerEl.querySelectorAll(".q-line b");
+    bs[0].textContent = p.fr;
+    bs[1].textContent = te.fr;
+    bs[2].textContent = v.fr;
+    answerEl.querySelector(".q-help").textContent = `${v.fr} = ${v.en} · ${te.fr} = ${te.en.split(":")[0]}`;
+    answerEl.querySelector(".reveal-btn").addEventListener("click", () => reveal(res));
+  }
+
+  function reveal(res) {
+    const btn = answerEl.querySelector(".reveal-btn");
+    const out = document.createElement("div");
+    if (res.text) {
+      out.className = "answer-text";
+      out.lang = "fr";
+      out.textContent = res.text;
+      const say = document.createElement("button");
+      say.className = "say-btn";
+      say.type = "button";
+      say.textContent = "🔊 Écoute";
+      say.addEventListener("click", () => FG.say(res.text));
+      btn.replaceWith(out, say);
+      if (FG.prefs.voice) FG.say(res.text);
+    } else {
+      out.className = "answer-note";
+      out.textContent = res.note + " Spin again!";
+      btn.replaceWith(out);
+    }
+  }
+
+  spinBtn.addEventListener("click", spinAll);
+  FG.bindSpaceBar(spinAll);
+</script>
+</body>
+</html>

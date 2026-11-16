@@ -112,17 +112,11 @@
     let enabled = new Set(store.get(key, all.map(i => i.fr)).filter(fr => all.some(i => i.fr === fr)));
     if (enabled.size === 0) enabled = new Set(all.map(i => i.fr));
 
-    root.innerHTML = `
-      <div class="wheel-box">
-        <div class="pointer" aria-hidden="true"></div>
-        <canvas aria-label="Spinning wheel"></canvas>
-      </div>
-      <div class="side">
-        <div class="result" aria-live="polite">
-          <div class="result-hint">Spin the wheel!</div>
-        </div>
-        <button class="spin-btn" type="button">Tourne ! 🎡</button>
-        <div class="kbd-hint">or press the space bar</div>
+    // "single": wheel + result card + spin button (one-wheel pages)
+    // "wheel-only": just the wheel; the page shows results and spins it
+    const single = (opts.layout || "single") === "single";
+    const tickOn = opts.tick !== false;
+    const chooserHTML = `
         <details class="choose">
           <summary><span class="choose-label"></span></summary>
           <div class="choose-actions">
@@ -130,15 +124,37 @@
             <button type="button" data-none>None</button>
           </div>
           <div class="chips"></div>
-        </details>
-      </div>`;
+        </details>`;
+
+    root.innerHTML = `
+      <div class="wheel-box">
+        <div class="pointer" aria-hidden="true"></div>
+        <canvas aria-label="Spinning wheel"></canvas>
+      </div>
+      ${single ? `
+      <div class="side">
+        <div class="result" aria-live="polite">
+          <div class="result-hint">Spin the wheel!</div>
+        </div>
+        <button class="spin-btn" type="button">Tourne ! 🎡</button>
+        <div class="kbd-hint">or press the space bar</div>
+        ${chooserHTML}
+      </div>` : ""}`;
+
+    let chooserRoot = root;
+    if (!single && opts.chooserEl) {
+      opts.chooserEl.innerHTML = chooserHTML;
+      chooserRoot = opts.chooserEl;
+    }
+    const hasChooser = single || !!opts.chooserEl;
 
     const canvas = root.querySelector("canvas");
     const g = canvas.getContext("2d");
     const resultEl = root.querySelector(".result");
     const spinBtn = root.querySelector(".spin-btn");
-    const chipsEl = root.querySelector(".chips");
-    const chooseLabel = root.querySelector(".choose-label");
+    const chipsEl = chooserRoot.querySelector(".chips");
+    const chooseLabel = chooserRoot.querySelector(".choose-label");
+    const chooseTitle = opts.chooserTitle || "On the wheel";
 
     let rot = 0;          // wheel rotation in radians
     let spinning = false;
@@ -187,6 +203,8 @@
         }
 
         // label, reading from the rim towards the centre
+        // (skipped when slices are too thin to read, e.g. 50 verbs on a small wheel)
+        if (r * Math.min(slice, 1.2) < 16) return;
         g.save();
         g.translate(c, c);
         g.rotate(start + slice / 2);
@@ -235,28 +253,34 @@
       if (sb) sb.addEventListener("click", () => say(item.fr));
     }
 
-    function spin() {
+    // spin(targetFr?) -> Promise<item>. Pass a target to land on a chosen item.
+    function spin(targetFr) {
       const items = active();
-      if (spinning || items.length === 0) return;
+      if (spinning || items.length === 0) return Promise.resolve(null);
       spinning = true;
-      spinBtn.disabled = true;
+      if (spinBtn) spinBtn.disabled = true;
       ctx();
+      let done;
+      const finished = new Promise(res => { done = res; });
 
       const n = items.length;
       const slice = (Math.PI * 2) / n;
-      const target = Math.floor(Math.random() * n);
+      let target = items.findIndex(i => i.fr === targetFr);
+      if (target < 0) target = Math.floor(Math.random() * n);
       const jitter = (Math.random() - 0.5) * slice * 0.7;
       const want = -((target + 0.5) * slice) + jitter;
       let delta = ((want - rot) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
       const turns = 5 + Math.floor(Math.random() * 3);
       const from = rot;
       const to = rot + delta + turns * Math.PI * 2;
-      const duration = 4200 + Math.random() * 900;
+      const duration = opts.duration || 4200 + Math.random() * 900;
       const t0 = performance.now();
       let lastIdx = indexAt(rot, n);
 
-      resultEl.innerHTML = '<div class="result-hint">…</div>';
-      resultEl.classList.remove("pop");
+      if (resultEl) {
+        resultEl.innerHTML = '<div class="result-hint">…</div>';
+        resultEl.classList.remove("pop");
+      }
 
       function frame(now) {
         const t = Math.min(1, (now - t0) / duration);
@@ -266,22 +290,26 @@
         const idx = indexAt(rot, n);
         if (idx !== lastIdx) {
           lastIdx = idx;
-          if (prefs.sound) sounds.tick();
+          if (prefs.sound && tickOn) sounds.tick();
         }
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {
           rot = rot % (Math.PI * 2);
           spinning = false;
-          spinBtn.disabled = false;
+          if (spinBtn) spinBtn.disabled = false;
           const item = items[indexAt(rot, n)];
-          showResult(item);
-          if (prefs.sound) sounds.ding();
-          if (prefs.voice) setTimeout(() => say(item.fr), 350);
+          if (single) {
+            showResult(item);
+            if (prefs.sound) sounds.ding();
+            if (prefs.voice) setTimeout(() => say(item.fr), 350);
+          }
           if (opts.onResult) opts.onResult(item);
+          done(item);
         }
       }
       requestAnimationFrame(frame);
+      return finished;
     }
 
     function renderChips() {
@@ -306,35 +334,42 @@
         });
         chipsEl.appendChild(b);
       });
-      chooseLabel.textContent = `On the wheel: ${enabled.size} of ${all.length}`;
+      chooseLabel.textContent = `${chooseTitle}: ${enabled.size} of ${all.length}`;
     }
 
     function changed() {
       store.set(key, [...enabled]);
       renderChips();
       draw();
+      if (opts.onChange) opts.onChange();
     }
 
-    root.querySelector("[data-all]").addEventListener("click", () => {
-      if (spinning) return;
-      enabled = new Set(all.map(i => i.fr));
-      changed();
-    });
-    root.querySelector("[data-none]").addEventListener("click", () => {
-      if (spinning) return;
-      enabled = new Set([all[0].fr]); // a wheel needs at least one
-      changed();
-    });
+    if (hasChooser) {
+      chooserRoot.querySelector("[data-all]").addEventListener("click", () => {
+        if (spinning) return;
+        enabled = new Set(all.map(i => i.fr));
+        changed();
+      });
+      chooserRoot.querySelector("[data-none]").addEventListener("click", () => {
+        if (spinning) return;
+        enabled = new Set([all[0].fr]); // a wheel needs at least one
+        changed();
+      });
+      renderChips();
+    }
 
-    spinBtn.addEventListener("click", spin);
-    canvas.addEventListener("click", spin);
+    if (single) {
+      spinBtn.addEventListener("click", () => spin());
+      canvas.addEventListener("click", () => spin());
+    } else if (opts.onWheelClick) {
+      canvas.addEventListener("click", opts.onWheelClick);
+    }
 
-    renderChips();
     new ResizeObserver(resize).observe(canvas.parentElement);
     resize();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 
-    return { spin, isSpinning: () => spinning };
+    return { spin, isSpinning: () => spinning, active };
   }
 
   // space bar spins every wheel on the page
@@ -344,9 +379,10 @@
       const tag = (e.target.tagName || "").toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "button" || tag === "summary") return;
       e.preventDefault();
-      spinners.forEach(s => s.spin());
+      if (typeof spinners === "function") spinners();
+      else spinners.forEach(s => s.spin());
     });
   }
 
-  window.FG = { createSpinner, bindSpaceBar, wireToggles, say };
+  window.FG = { createSpinner, bindSpaceBar, wireToggles, say, sounds, prefs };
 })();
