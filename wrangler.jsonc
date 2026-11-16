@@ -1,0 +1,8 @@
+{
+  "name": "french-games",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash"
+  }
+}

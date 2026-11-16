@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les pronoms · Jeux de français</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎡</text></svg>">
+</head>
+<body class="theme-pronouns">
+<header class="topbar">
+  <a class="back" href="./">← Tous les jeux</a>
+  <div class="toggles">
+    <button class="icon-btn" type="button" data-toggle="voice" title="Read the answer aloud in French"></button>
+    <button class="icon-btn" type="button" data-toggle="sound" title="Sound effects"></button>
+  </div>
+</header>
+<h1 class="page-title">Les pronoms</h1>
+<p class="page-sub">Subject pronouns: who is doing it?</p>
+<main class="spinner-wrap" id="spinner"></main>
+<script src="data.js"></script>
+<script src="spinner.js"></script>
+<script>
+  FG.wireToggles();
+  const s = FG.createSpinner(document.getElementById("spinner"), {
+    items: FG_DATA.pronouns,
+    storageKey: "pronouns"
+  });
+  FG.bindSpaceBar([s]);
+</script>
+</body>
+</html>
