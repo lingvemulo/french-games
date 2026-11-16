@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler pages deploy public --project-name french-games --branch main --commit-dirty=true"
   },
   "devDependencies": {
     "wrangler": "^4.130.0"
