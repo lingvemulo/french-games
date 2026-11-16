@@ -5,8 +5,8 @@
 
 (function () {
   const COLORS = [
-    "#ffd43b", "#74c0fc", "#ff8787", "#8ce99a",
-    "#b197fc", "#ffa94d", "#63e6be", "#f783ac"
+    "#ff6b6b", "#ffd93d", "#4d96ff", "#6bcb77",
+    "#c77dff", "#ff9f45", "#2ec4b6", "#f15bb5"
   ];
 
   // ---------- small helpers ----------
@@ -116,6 +116,14 @@
     // "wheel-only": just the wheel; the page shows results and spins it
     const single = (opts.layout || "single") === "single";
     const tickOn = opts.tick !== false;
+    const modeHTML = `
+        <div class="mode">
+          <div class="seg" role="group" aria-label="Spinner mode">
+            <button type="button" data-mode="normal" title="Results can come up again">Normal</button>
+            <button type="button" data-mode="elim" title="Each result is removed from the wheel until all have come up"><span class="long">Elimination</span><span class="short">Élim.</span></button>
+          </div>
+          <div class="mode-status"></div>
+        </div>`;
     const chooserHTML = `
         <details class="choose">
           <summary><span class="choose-label"></span></summary>
@@ -138,6 +146,7 @@
         </div>
         <button class="spin-btn" type="button">Tourne ! 🎡</button>
         <div class="kbd-hint">or press the space bar</div>
+        ${modeHTML}
         ${chooserHTML}
       </div>` : ""}`;
 
@@ -147,6 +156,12 @@
       chooserRoot = opts.chooserEl;
     }
     const hasChooser = single || !!opts.chooserEl;
+
+    let modeRoot = single ? root : null;
+    if (!single && opts.modeEl) {
+      opts.modeEl.innerHTML = modeHTML;
+      modeRoot = opts.modeEl;
+    }
 
     const canvas = root.querySelector("canvas");
     const g = canvas.getContext("2d");
@@ -162,6 +177,73 @@
 
     const active = () => all.filter(i => enabled.has(i.fr));
 
+    // ----- Normal / Elimination -----
+    // In elimination mode a result stays on the wheel (under the pointer)
+    // until the next spin, then it's removed. When nothing is left, the
+    // next spin refills the wheel.
+    const modeKey = "fg:mode:" + opts.storageKey;
+    const usedKey = "fg:used:" + opts.storageKey;
+    let mode = store.get(modeKey, "normal") === "elim" ? "elim" : "normal";
+    let used = new Set(store.get(usedKey, []));
+    const remaining = () => mode === "elim" ? active().filter(i => !used.has(i.fr)) : active();
+    let wheelItems = remaining().length ? remaining() : active();
+    let justRefilled = false;
+
+    function saveUsed() { store.set(usedKey, [...used]); }
+
+    // Bring the wheel up to date before a spin. Safe to call more than once.
+    function prepare() {
+      if (spinning) return;
+      if (mode === "elim" && remaining().length === 0) {
+        used.clear();
+        saveUsed();
+        justRefilled = true;
+      }
+      wheelItems = remaining();
+      draw();
+      paintMode();
+    }
+
+    function paintMode() {
+      if (!modeRoot) return;
+      modeRoot.querySelectorAll("[data-mode]").forEach(b =>
+        b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+      const status = modeRoot.querySelector(".mode-status");
+      if (mode === "normal") {
+        status.textContent = single ? "Results can come up again" : "";
+        return;
+      }
+      const left = remaining().length;
+      const total = active().length;
+      if (left === 0) {
+        status.textContent = "All done! 🎉 Next spin refills it";
+      } else if (justRefilled) {
+        status.textContent = `Refilled · ${left} left`;
+      } else {
+        status.innerHTML = `${left} of ${total} left · <button type="button" data-refill>Refill</button>`;
+        status.querySelector("[data-refill]").addEventListener("click", () => {
+          if (spinning) return;
+          used.clear();
+          saveUsed();
+          wheelItems = remaining();
+          draw();
+          paintMode();
+        });
+      }
+    }
+
+    function setMode(m) {
+      if (spinning || m === mode) return;
+      mode = m;
+      store.set(modeKey, mode);
+      used.clear();          // elimination always starts with a full wheel
+      saveUsed();
+      justRefilled = false;
+      wheelItems = remaining();
+      draw();
+      paintMode();
+    }
+
     function resize() {
       const box = canvas.parentElement.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -173,7 +255,7 @@
     }
 
     function draw() {
-      const items = active();
+      const items = wheelItems;
       const n = items.length;
       const c = size / 2;
       const r = c - 6;
@@ -183,7 +265,7 @@
       // rim
       g.beginPath();
       g.arc(c, c, r + 4, 0, Math.PI * 2);
-      g.fillStyle = "#1f2a44";
+      g.fillStyle = "#2c303b";
       g.fill();
 
       items.forEach((item, i) => {
@@ -197,7 +279,7 @@
         if (n > 1 && i === n - 1 && (n - 1) % COLORS.length === 0) g.fillStyle = COLORS[3];
         g.fill();
         if (n > 1) {
-          g.strokeStyle = "rgba(255,255,255,0.7)";
+          g.strokeStyle = "rgba(13,14,18,0.55)";
           g.lineWidth = 1.5;
           g.stroke();
         }
@@ -210,13 +292,13 @@
         g.rotate(start + slice / 2);
         g.textAlign = "right";
         g.textBaseline = "middle";
-        g.fillStyle = "#1f2a44";
+        g.fillStyle = "#0d0e12";
         const maxLen = r * 0.72;
         let fs = Math.min(30, Math.max(10, r * Math.min(slice, 1.2) * 0.5));
-        g.font = `600 ${fs}px Fredoka, Nunito, sans-serif`;
+        g.font = `600 ${fs}px "Space Grotesk", Inter, sans-serif`;
         while (g.measureText(item.fr).width > maxLen && fs > 9) {
           fs -= 1;
-          g.font = `600 ${fs}px Fredoka, Nunito, sans-serif`;
+          g.font = `600 ${fs}px "Space Grotesk", Inter, sans-serif`;
         }
         g.fillText(item.fr, r - 12, 0);
         g.restore();
@@ -225,10 +307,10 @@
       // hub
       g.beginPath();
       g.arc(c, c, r * 0.11, 0, Math.PI * 2);
-      g.fillStyle = "#fff";
+      g.fillStyle = "#0d0e12";
       g.fill();
       g.lineWidth = 4;
-      g.strokeStyle = "#1f2a44";
+      g.strokeStyle = "#f2f4f8";
       g.stroke();
     }
 
@@ -255,8 +337,10 @@
 
     // spin(targetFr?) -> Promise<item>. Pass a target to land on a chosen item.
     function spin(targetFr) {
-      const items = active();
-      if (spinning || items.length === 0) return Promise.resolve(null);
+      if (spinning) return Promise.resolve(null);
+      prepare();
+      const items = wheelItems;
+      if (items.length === 0) return Promise.resolve(null);
       spinning = true;
       if (spinBtn) spinBtn.disabled = true;
       ctx();
@@ -304,6 +388,12 @@
             if (prefs.sound) sounds.ding();
             if (prefs.voice) setTimeout(() => say(item.fr), 350);
           }
+          if (mode === "elim") {
+            used.add(item.fr);   // removed from the wheel at the next spin
+            saveUsed();
+          }
+          justRefilled = false;
+          paintMode();
           if (opts.onResult) opts.onResult(item);
           done(item);
         }
@@ -340,7 +430,9 @@
     function changed() {
       store.set(key, [...enabled]);
       renderChips();
+      wheelItems = remaining();
       draw();
+      paintMode();
       if (opts.onChange) opts.onChange();
     }
 
@@ -369,7 +461,13 @@
     resize();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 
-    return { spin, isSpinning: () => spinning, active };
+    if (modeRoot) {
+      modeRoot.querySelectorAll("[data-mode]").forEach(b =>
+        b.addEventListener("click", () => setMode(b.dataset.mode)));
+    }
+    paintMode();
+
+    return { spin, prepare, items: () => wheelItems, isSpinning: () => spinning, active };
   }
 
   // space bar spins every wheel on the page

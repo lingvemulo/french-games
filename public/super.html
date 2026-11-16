@@ -6,7 +6,7 @@
 <title>La super roue · Jeux de français</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎰</text></svg>">
 </head>
@@ -27,16 +27,19 @@
       <div class="multi-label">1 · Pronom</div>
       <div class="multi-wheel" id="w-pronoun"></div>
       <div class="multi-pick" id="p-pronoun" lang="fr">?</div>
+      <div id="m-pronoun"></div>
     </section>
     <section class="multi-col c-tense">
       <div class="multi-label">2 · Temps</div>
       <div class="multi-wheel" id="w-tense"></div>
       <div class="multi-pick" id="p-tense" lang="fr">?</div>
+      <div id="m-tense"></div>
     </section>
     <section class="multi-col c-verb">
       <div class="multi-label">3 · Verbe</div>
       <div class="multi-wheel" id="w-verb"></div>
       <div class="multi-pick" id="p-verb" lang="fr">?</div>
+      <div id="m-verb"></div>
     </section>
   </div>
 
@@ -73,18 +76,19 @@
   const wheels = {
     pronoun: FG.createSpinner(document.getElementById("w-pronoun"), {
       items: D.pronouns, storageKey: "super-pronouns", layout: "wheel-only",
-      chooserEl: document.getElementById("choose-pronoun"), chooserTitle: "Pronouns on the wheel",
+      chooserEl: document.getElementById("choose-pronoun"), modeEl: document.getElementById("m-pronoun"), chooserTitle: "Pronouns on the wheel",
       tick: false, duration: 2600, onWheelClick: spinAll,
       onResult: item => showPick("pronoun", item.fr)
     }),
     tense: FG.createSpinner(document.getElementById("w-tense"), {
       items: D.tenses, storageKey: "super-tenses", layout: "wheel-only",
-      chooserEl: document.getElementById("choose-tense"), chooserTitle: "Tenses on the wheel",
+      chooserEl: document.getElementById("choose-tense"), modeEl: document.getElementById("m-tense"), chooserTitle: "Tenses on the wheel",
       tick: false, duration: 3500, onWheelClick: spinAll,
       onResult: item => showPick("tense", item.fr)
     }),
     verb: FG.createSpinner(document.getElementById("w-verb"), {
       items: D.verbs, storageKey: "super-verbs-all", layout: "wheel-only",
+      modeEl: document.getElementById("m-verb"),
       duration: 4600, onWheelClick: spinAll,
       onResult: item => showPick("verb", item.fr)
     })
@@ -102,17 +106,24 @@
 
   // Choose the three results first, so we never land on something that
   // doesn't exist (e.g. "je" + impératif, or impératif of pouvoir).
+  // Uses only what's currently on each wheel (so Elimination mode is respected).
   function chooseTargets() {
-    const tenses = wheels.tense.active();
-    const pronouns = wheels.pronoun.active();
-    const verbs = wheels.verb.active();
-    const tense = rand(tenses);
-    const combos = [];
-    pronouns.forEach(p => verbs.forEach(v => {
-      if (FG_CONJ.exists(p.fr, tense.fr, v.fr)) combos.push([p, v]);
-    }));
-    const [pronoun, verb] = combos.length ? rand(combos) : [rand(pronouns), rand(verbs)];
-    return { pronoun, tense, verb };
+    Object.values(wheels).forEach(w => w.prepare());
+    const pronouns = wheels.pronoun.items();
+    const verbs = wheels.verb.items();
+    // try tenses in random order until one has a real answer with what's left
+    const tenses = wheels.tense.items().slice().sort(() => Math.random() - 0.5);
+    for (const tense of tenses) {
+      const combos = [];
+      pronouns.forEach(p => verbs.forEach(v => {
+        if (FG_CONJ.exists(p.fr, tense.fr, v.fr)) combos.push([p, v]);
+      }));
+      if (combos.length) {
+        const [pronoun, verb] = rand(combos);
+        return { pronoun, tense, verb };
+      }
+    }
+    return { pronoun: rand(pronouns), tense: tenses[0], verb: rand(verbs) };
   }
 
   let busy = false;
