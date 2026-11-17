@@ -601,3 +601,23 @@ a.hub-card:hover .hub-arrow { transform: translateX(4px); color: var(--c); }
   .res-item { grid-template-columns: 1fr auto; }
   .res-kind { display: none; }
 }
+
+/* ---------- External (bridging21.com) game cards ---------- */
+.label-note {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--muted);
+  opacity: 0.75;
+  margin-left: 6px;
+}
+.game-card .ext-mark {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  color: var(--muted);
+  font-size: 18px;
+  transition: color 0.15s, transform 0.15s;
+}
+.game-card.ext:hover .ext-mark { color: var(--c); transform: translate(2px, -2px); }
+.game-grid + .section-label { margin-top: 8px; }
