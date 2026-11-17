@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ressources · Français · Bridging21</title>
+<meta name="description" content="French grammar, vocabulary, songs and music resources from Bridging21.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,16 +16,97 @@
   <a class="back" href="./">← Accueil</a>
 </header>
 <h1 class="page-title">Ressources</h1>
-<p class="page-sub">French resources are on their way to this page.</p>
+<p class="page-sub">Grammar, vocabulary, songs and more. Links open on bridging21.com.</p>
 
-<div class="hub-grid">
-  <div class="hub-card soon">
-    <div class="hub-emoji">🚧</div>
-    <div>
-      <h2>En construction</h2>
-      <p>Coming soon: songs, worksheets and reference material for learning French.</p>
-    </div>
-  </div>
-</div>
+<nav class="res-jump" id="jump" aria-label="Sections"></nav>
+<main class="res" id="res"></main>
+
+<script>
+  // To add a resource: add a line to the right section. kind = a short label.
+  const B21 = "https://www.bridging21.com";
+  const SECTIONS = [
+    {
+      id: "grammaire", title: "Grammaire", emoji: "✏️", color: "var(--c-verb)",
+      items: [
+        { t: "Dr. Mrs. Vandertrampp", d: "Remember the verbs that take être in the passé composé", kind: "Memory aid", url: "/dr-mrs-vandertrampp/" },
+        { t: "L’hôpital « d’être »", d: "Les verbes qui se conjuguent avec être au passé composé", kind: "Printable", url: "/hopital-detre/" },
+        { t: "Quel auxiliaire ?", d: "Avoir ou être ? Glisser chaque verbe dans la bonne colonne", kind: "Activity", url: "/quel-auxiliaire/" },
+        { t: "Participes passés irréguliers", d: "A game for irregular past participles", kind: "Game", url: "/participes-passes-irreguliers-jeu/" },
+        { t: "Qui, que, ce qui, ce que", d: "Infographics for relative pronouns", kind: "Infographic", url: "/qui-que-ce-qui-ce-que/" },
+        { t: "Est-ce que… ?", d: "Asking questions", kind: "Grammar", url: "/est-ce-que/" },
+        { t: "Amener, apporter, emmener, emporter", d: "Which one do I use?", kind: "Grammar", url: "/a-em-porter-mener/" },
+        { t: "Adverbes de fréquence", d: "Toujours, souvent, parfois, jamais…", kind: "Grammar", url: "/adverbes-de-frequence/" }
+      ]
+    },
+    {
+      id: "vocabulaire", title: "Vocabulaire", emoji: "🗂️", color: "var(--c-tense)",
+      items: [
+        { t: "Les couleurs", d: "Apprendre les couleurs : crosswords, lists and more", kind: "Worksheets", url: "/les-couleurs/" },
+        { t: "Couleurs individuelles", d: "High-resolution colour cards to print", kind: "PDF", url: "/couleurs-individuelles/" },
+        { t: "Les vêtements", d: "Talking about clothes: wheel and foldable", kind: "Worksheets", url: "/les-vetements/" },
+        { t: "La trousse", d: "Pencil-case vocabulary: writing, foldable and colouring", kind: "Worksheets", url: "/la-trousse/" },
+        { t: "Le corps humain", d: "Parts of the body: flashcards and activities", kind: "Flashcards", url: "/le-corps-humain/" },
+        { t: "Les grands monuments", d: "Speaking, listening and reading about famous monuments", kind: "Activity", url: "/les-grands-monuments/" },
+        { t: "Instruments FR–EN", d: "The instruments of the orchestra in French", kind: "Vocabulary", url: "/instruments-fr-en/" },
+        { t: "Bataille navale", d: "Battleship templates for practising any vocabulary", kind: "Game", url: "/battleship-bataille-navale/" }
+      ]
+    },
+    {
+      id: "chansons", title: "Chansons", emoji: "🎵", color: "var(--c-pronoun)",
+      items: [
+        { t: "Les chiffres et les nombres de 1 à 10", d: "Counting song by Alain le Lait", kind: "Song", url: "/songs-for-learning/song/les-chiffres-et-les-nombres-de-1-a-10/" },
+        { t: "Arc-en-ciel", d: "The colours, by Alain le Lait", kind: "Song", url: "/songs-for-learning/song/arc-en-ciel-par-alain-le-lait/" },
+        { t: "Alain le Lait playlist", d: "Funny, catchy songs for learning French", kind: "Playlist", url: "/alain-le-lait-playlist/" }
+      ]
+    },
+    {
+      id: "musique", title: "Musique en français", emoji: "🎻", color: "var(--c-super)",
+      items: [
+        { t: "L’orchestre", d: "Les instruments de l’orchestre : noms, sons et familles", kind: "Course", url: "/courses/l-orchestre/" },
+        { t: "Le Carnaval des animaux", d: "Saint-Saëns’ musical zoo", kind: "Course", url: "/courses/carnaval-des-animaux/" },
+        { t: "La comédie musicale", d: "Musicals, in French and English", kind: "Course", url: "/courses/musicals-la-comedie-musicale/" },
+        { t: "Les familles d’instruments", d: "Glisser, déposer : sort the instruments into families", kind: "Activity", url: "/les-familles-dinstruments-glisser-deposer/" }
+      ]
+    }
+  ];
+
+  const jump = document.getElementById("jump");
+  const res = document.getElementById("res");
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+
+  SECTIONS.forEach(sec => {
+    const a = el("a", "res-chip", `${sec.emoji} ${sec.title}`);
+    a.href = "#" + sec.id;
+    jump.appendChild(a);
+
+    const s = el("section", "res-section");
+    s.id = sec.id;
+    s.style.setProperty("--c", sec.color);
+    const h = el("h2", "res-h");
+    h.append(el("span", "res-h-emoji", sec.emoji), sec.title, el("span", "res-count", String(sec.items.length)));
+    s.appendChild(h);
+
+    const list = el("div", "res-list");
+    sec.items.forEach(it => {
+      const row = el("a", "res-item");
+      row.href = B21 + it.url;
+      row.target = "_blank";
+      row.rel = "noopener";
+      const txt = el("div", "res-text");
+      const title = el("div", "res-title", it.t);
+      title.lang = "fr";
+      txt.append(title, el("div", "res-desc", it.d));
+      row.append(txt, el("span", "res-kind", it.kind), el("span", "res-arrow", "↗"));
+      list.appendChild(row);
+    });
+    s.appendChild(list);
+    res.appendChild(s);
+  });
+</script>
 </body>
 </html>

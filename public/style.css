@@ -519,3 +519,85 @@ a.hub-card:hover .hub-arrow { transform: translateX(4px); color: var(--c); }
 .hub-footer { text-align: center; padding: 0 16px 40px; }
 .hub-footer a { color: var(--muted); font-size: 14px; text-decoration: none; }
 .hub-footer a:hover { color: var(--ink); }
+
+/* ---------- Ressources ---------- */
+.res-jump {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 760px;
+  margin: 18px auto 0;
+  padding: 0 16px;
+}
+.res-chip {
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+.res-chip:hover { border-color: var(--muted); }
+.res { max-width: 760px; margin: 0 auto; padding: 8px 16px 56px; }
+.res-section { margin-top: 36px; scroll-margin-top: 16px; }
+.res-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 24px;
+  margin: 0 0 12px;
+}
+.res-h::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+  margin-left: 6px;
+}
+.res-h-emoji { font-size: 22px; }
+.res-count {
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c);
+  border: 1px solid var(--c);
+  border-radius: 999px;
+  padding: 1px 8px;
+  letter-spacing: 0;
+}
+.res-list { display: grid; gap: 8px; }
+.res-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--c);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.res-item:hover { border-color: var(--c); transform: translateX(2px); }
+.res-title { font-weight: 600; color: var(--ink); }
+.res-desc { color: var(--muted); font-size: 14px; }
+.res-kind {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.res-arrow { color: var(--muted); font-size: 18px; }
+.res-item:hover .res-arrow { color: var(--c); }
+@media (max-width: 520px) {
+  .res-item { grid-template-columns: 1fr auto; }
+  .res-kind { display: none; }
+}
