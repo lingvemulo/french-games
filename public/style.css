@@ -470,3 +470,52 @@ button:focus-visible, a:focus-visible, summary:focus-visible {
   .multi-col .seg .short { display: inline; }
   .multi-col .mode-status { font-size: 11px; }
 }
+
+/* ---------- French hub (home) ---------- */
+body.theme-hub { --accent: #4d96ff; --accent-soft: rgba(77, 150, 255, 0.12); }
+.hub-hero { padding-top: 72px; }
+.flag-bar { display: flex; justify-content: center; gap: 6px; margin-bottom: 22px; }
+.flag-bar span { width: 34px; height: 6px; border-radius: 6px; }
+.flag-bar span:nth-child(1) { background: #4d96ff; }
+.flag-bar span:nth-child(2) { background: #f2f4f8; }
+.flag-bar span:nth-child(3) { background: #ff6b6b; }
+.home-hero--sub { padding-top: 24px; }
+
+.hub-grid {
+  max-width: 760px;
+  margin: 36px auto 40px;
+  padding: 0 16px;
+  display: grid;
+  gap: 14px;
+}
+.hub-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  text-decoration: none;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  overflow: hidden;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.hub-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--c, var(--line));
+}
+a.hub-card:hover { transform: translateY(-2px); border-color: var(--c); }
+.hub-emoji { font-size: 36px; line-height: 1; }
+.hub-card h2 { margin: 0 0 2px; font-size: clamp(22px, 4.5vw, 28px); color: var(--ink); }
+.hub-card p { margin: 0; color: var(--muted); font-size: 15px; }
+.hub-arrow { font-size: 24px; color: var(--muted); transition: transform 0.15s, color 0.15s; }
+a.hub-card:hover .hub-arrow { transform: translateX(4px); color: var(--c); }
+.hub-card.soon { border-style: dashed; opacity: 0.6; }
+.hub-footer { text-align: center; padding: 0 16px 40px; }
+.hub-footer a { color: var(--muted); font-size: 14px; text-decoration: none; }
+.hub-footer a:hover { color: var(--ink); }
